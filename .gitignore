@@ -1,0 +1,34 @@
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# Токены и секреты
+.env
+openai-token.txt
+telegram-token.txt
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyCharm
+.idea/
+*.iml
+
+# Логи
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+*.tmp
+temp/
+
