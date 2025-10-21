@@ -1,5 +1,5 @@
 """
-Обработчик команды /quiz - Квиз
+Оброблювач команди /quiz - Квіз
 """
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 async def quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Начало квиза - выбор темы"""
+    """Початок квізу - вибір теми"""
     user = update.effective_user
-    logger.info(f"Пользователь {user.first_name} ({user.id}) вызвал /quiz")
+    logger.info(f"Користувач {user.first_name} ({user.id}) натиснув /quiz")
 
     context.user_data['quiz_score'] = 0
     context.user_data['quiz_total'] = 0
@@ -32,12 +32,12 @@ async def quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with open('images/quiz.jpg', 'rb') as photo:
             await update.message.reply_photo(
                 photo=photo,
-                caption="🎮 Квиз!\n\nВыбери тему для вопросов:",
+                caption="🎮 Квіз!\n\nВибери тему для запитань:",
                 reply_markup=reply_markup
             )
     except FileNotFoundError:
         await update.message.reply_text(
-            "🎮 Квиз!\n\nВыбери тему для вопросов:",
+            "🎮 Квіз!\n\nВибери тему для запитань:",
             reply_markup=reply_markup
         )
 
@@ -45,7 +45,7 @@ async def quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def quiz_choose_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Пользователь выбрал тему, генерируем вопрос"""
+    """Користувач вибрав тему, генеруємо питання"""
     query = update.callback_query
     user = query.from_user
     await query.answer()
@@ -54,17 +54,17 @@ async def quiz_choose_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     theme = QUIZ_THEMES.get(theme_key)
 
     if not theme:
-        await query.message.reply_text("Ошибка выбора темы. Попробуй /quiz снова.")
+        await query.message.reply_text("Помилка вибору теми. Спробуй /quiz знов.")
         return ConversationHandler.END
 
     context.user_data['quiz_theme'] = theme
     context.user_data['quiz_theme_key'] = theme_key
 
-    logger.info(f"Пользователь {user.first_name} ({user.id}) выбрал тему {theme['name']}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) вибрав тему {theme['name']}")
 
-    await query.message.reply_text("⏳ Генерирую вопрос...")
+    await query.message.reply_text("⏳ Генерую питання...")
 
-    prompt = f"Придумай один интересный вопрос для квиза на тему '{theme['name']}'. Вопрос должен быть средней сложности. Напиши только сам вопрос, без ответа."
+    prompt = f"Придумай одне цікаве питання для квіза на тему '{theme['name']}'. Питання має бути середньої складності. Напиши лише саме запитання, без відповіді."
     question = get_chatgpt_response(prompt)
 
     context.user_data['quiz_current_question'] = question
@@ -74,16 +74,16 @@ async def quiz_choose_theme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.message.reply_text(
         f"{theme['emoji']} Тема: {theme['name']}\n"
-        f"📊 Счет: {score}/{total}\n\n"
-        f"❓ Вопрос:\n{question}\n\n"
-        f"Напиши свой ответ:"
+        f"📊 Рахунок: {score}/{total}\n\n"
+        f"❓ Питання:\n{question}\n\n"
+        f"Напиши свою відповідь:"
     )
 
     return ANSWERING_QUIZ
 
 
 async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Проверяем ответ пользователя"""
+    """Перевіряємо відповідь користувача"""
     user = update.effective_user
     user_answer = update.message.text
 
@@ -91,14 +91,14 @@ async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     theme = context.user_data.get('quiz_theme')
 
     if not question or not theme:
-        await update.message.reply_text("Ошибка квиза. Начни заново с /quiz")
+        await update.message.reply_text("Помилка квиза. Почни заново з /quiz")
         return ConversationHandler.END
 
-    logger.info(f"Пользователь {user.first_name} ({user.id}) ответил: {user_answer}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) відповів: {user_answer}")
 
-    await update.message.reply_text("⏳ Проверяю ответ...")
+    await update.message.reply_text("⏳ Перевіряю відповідь...")
 
-    check_prompt = f"Вопрос квиза: {question}\nОтвет пользователя: {user_answer}\n\nПроверь, правильный ли ответ. Ответь ТОЛЬКО 'Правильно' или 'Неправильно', а затем кратко объясни почему и дай правильный ответ если нужно."
+    check_prompt = f"Питання квізу: {question}\nВідповідь користувача: {user_answer}\n\nПеревір, чи правильна відповідь. Відповідай ТІЛЬКИ 'Правильно' або 'Неправильно', а потім коротко поясни чому і дай правильну відповідь якщо потрібно."
     result = get_chatgpt_response(check_prompt)
 
     is_correct = result.lower().startswith("правильно")
@@ -116,15 +116,15 @@ async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['quiz_total'] = total
 
     keyboard = [
-        [InlineKeyboardButton("➕ Еще вопрос", callback_data="quiz_more")],
-        [InlineKeyboardButton("🔄 Сменить тему", callback_data="quiz_change_theme")],
-        [InlineKeyboardButton("❌ Закончить квиз", callback_data="quiz_end")]
+        [InlineKeyboardButton("➕ Ще питання", callback_data="quiz_more")],
+        [InlineKeyboardButton("🔄 Змінити тему", callback_data="quiz_change_theme")],
+        [InlineKeyboardButton("❌ Закінчити квіз", callback_data="quiz_end")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
         f"{emoji} {result}\n\n"
-        f"📊 Текущий счет: {score}/{total}",
+        f"📊 Поточний рахунок: {score}/{total}",
         reply_markup=reply_markup
     )
 
@@ -134,7 +134,7 @@ async def quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def quiz_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает нажатия на кнопки в квизе"""
+    """Обробляє натискання кнопок у квізі"""
     query = update.callback_query
     user = query.from_user
     await query.answer()
@@ -143,14 +143,14 @@ async def quiz_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         theme = context.user_data.get('quiz_theme')
 
         if not theme:
-            await query.message.reply_text("Ошибка. Начни квиз заново с /quiz")
+            await query.message.reply_text("Помилка. Почни квіз заново з /quiz")
             return ConversationHandler.END
 
-        logger.info(f"Пользователь {user.first_name} ({user.id}) запросил еще вопрос")
+        logger.info(f"Користувач {user.first_name} ({user.id}) хоче ще питання")
 
-        await query.message.reply_text("⏳ Генерирую новый вопрос...")
+        await query.message.reply_text("⏳ Генерую нове питання...")
 
-        prompt = f"Придумай один интересный вопрос для квиза на тему '{theme['name']}'. Вопрос должен быть средней сложности. Напиши только сам вопрос, без ответа."
+        prompt = f"Придумай одне цікаве питання для квіза на тему '{theme['name']}'. Питання має бути середньої складності. Напиши лише саме запитання, без відповіді."
         question = get_chatgpt_response(prompt)
 
         context.user_data['quiz_current_question'] = question
@@ -160,15 +160,15 @@ async def quiz_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await query.message.reply_text(
             f"{theme['emoji']} Тема: {theme['name']}\n"
-            f"📊 Счет: {score}/{total}\n\n"
-            f"❓ Вопрос:\n{question}\n\n"
-            f"Напиши свой ответ:"
+            f"📊 Рахунок: {score}/{total}\n\n"
+            f"❓ Питання:\n{question}\n\n"
+            f"Напиши свою відповідь:"
         )
 
         return ANSWERING_QUIZ
 
     elif query.data == "quiz_change_theme":
-        logger.info(f"Пользователь {user.first_name} ({user.id}) меняет тему квиза")
+        logger.info(f"Користувач {user.first_name} ({user.id}) змінює тему квиза")
 
         keyboard = []
         for key, theme in QUIZ_THEMES.items():
@@ -184,7 +184,7 @@ async def quiz_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await query.message.reply_text(
             f"📊 Текущий счет: {score}/{total}\n\n"
-            f"Выбери новую тему:",
+            f"Вибери нову тему:",
             reply_markup=reply_markup
         )
 
@@ -194,19 +194,19 @@ async def quiz_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         score = context.user_data.get('quiz_score', 0)
         total = context.user_data.get('quiz_total', 0)
 
-        logger.info(f"Пользователь {user.first_name} ({user.id}) завершил квиз. Счет: {score}/{total}")
+        logger.info(f"Користувач {user.first_name} ({user.id}) завершив квіз. Рахунок: {score}/{total}")
 
         if total > 0:
             percentage = (score / total) * 100
             await query.message.reply_text(
-                f"🎮 Квиз завершен!\n\n"
-                f"📊 Итоговый счет: {score}/{total} ({percentage:.1f}%)\n\n"
-                f"Используй /quiz чтобы сыграть снова или /start для главного меню."
+                f"🎮 Квіз завершено!\n\n"
+                f"📊 Підсумковий рахунок: {score}/{total} ({percentage:.1f}%)\n\n"
+                f"Використовуйте /quiz щоб зіграти знову або /start для головного меню."
             )
         else:
             await query.message.reply_text(
-                "🎮 Квиз завершен!\n\n"
-                "Используй /quiz чтобы сыграть или /start для главного меню."
+                "🎮 Квіз завершено!\n\n"
+                "Використовуйте /quiz щоб зіграти або /start для головного меню."
             )
 
         context.user_data.clear()

@@ -1,5 +1,5 @@
 """
-Обработчик команды /talk - Диалог с известными личностями
+Обробник команди /talk - Діалог з відомими особистостями
 """
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 async def talk_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Начало диалога с личностью - выбор персонажа"""
+    """Початок діалогу з особою – вибір персонажа"""
     user = update.effective_user
-    logger.info(f"Пользователь {user.first_name} ({user.id}) вызвал /talk")
+    logger.info(f"Користувач {user.first_name} ({user.id}) натиснув /talk")
 
     keyboard = []
     for key, person in PERSONALITIES.items():
@@ -29,12 +29,12 @@ async def talk_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with open('images/talk.jpg', 'rb') as photo:
             await update.message.reply_photo(
                 photo=photo,
-                caption="🎭 Диалог с известной личностью\n\nВыбери, с кем хочешь поговорить:",
+                caption="🎭 Діалог з відомою особою\n\nВибери, з ким хочеш поговорити:",
                 reply_markup=reply_markup
             )
     except FileNotFoundError:
         await update.message.reply_text(
-            "🎭 Диалог с известной личностью\n\nВыбери, с кем хочешь поговорить:",
+            "🎭 Діалог з відомою особою\n\nВибери, з ким хочеш поговорити:",
             reply_markup=reply_markup
         )
 
@@ -42,7 +42,7 @@ async def talk_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def talk_choose_person(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Пользователь выбрал личность"""
+    """Користувач вибрав особу"""
     query = update.callback_query
     user = query.from_user
     await query.answer()
@@ -51,7 +51,7 @@ async def talk_choose_person(update: Update, context: ContextTypes.DEFAULT_TYPE)
     person = PERSONALITIES.get(person_key)
 
     if not person:
-        await query.message.reply_text("Ошибка выбора личности. Попробуй /talk снова.")
+        await query.message.reply_text("Помилка вибору особи. Спробуй /Talk знову.")
         return ConversationHandler.END
 
     context.user_data['person'] = person
@@ -60,15 +60,15 @@ async def talk_choose_person(update: Update, context: ContextTypes.DEFAULT_TYPE)
         {"role": "system", "content": person['prompt']}
     ]
 
-    logger.info(f"Пользователь {user.first_name} ({user.id}) выбрал {person['name']}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) вибрав {person['name']}")
 
-    keyboard = [[InlineKeyboardButton("❌ Закончить диалог", callback_data="talk_end")]]
+    keyboard = [[InlineKeyboardButton("❌ Закінчити діалог", callback_data="talk_end")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await query.message.reply_text(
-        f"{person['emoji']} Ты начал диалог с {person['name']}!\n\n"
-        f"Задавай вопросы или просто общайся. Я буду отвечать в стиле этой личности.\n\n"
-        f"Для завершения диалога нажми кнопку ниже.",
+        f"{person['emoji']} Ти почав діалог з {person['name']}!\n\n"
+        f"Задавай питання або просто спілкуйся. Я відповідатиму в стилі цієї особи.\n\n"
+        f"Для завершення діалогу натисніть кнопку нижче.",
         reply_markup=reply_markup
     )
 
@@ -76,7 +76,7 @@ async def talk_choose_person(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def talk_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает сообщения в диалоге с личностью"""
+    """Обробляє повідомлення у діалозі з особою"""
     user = update.effective_user
     user_message = update.message.text
 
@@ -84,10 +84,10 @@ async def talk_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history = context.user_data.get('conversation_history', [])
 
     if not person:
-        await update.message.reply_text("Ошибка: личность не выбрана. Начни заново с /talk")
+        await update.message.reply_text("Помилка: особа не вибрана. Почни заново с /talk")
         return ConversationHandler.END
 
-    logger.info(f"Пользователь {user.first_name} ({user.id}) в диалоге с {person['name']}: {user_message}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) в діалозі з {person['name']}: {user_message}")
 
     conversation_history.append({"role": "user", "content": user_message})
 
@@ -99,7 +99,7 @@ async def talk_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data['conversation_history'] = conversation_history
 
-    keyboard = [[InlineKeyboardButton("❌ Закончить диалог", callback_data="talk_end")]]
+    keyboard = [[InlineKeyboardButton("❌ Закінчити діалог", callback_data="talk_end")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
@@ -107,13 +107,13 @@ async def talk_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-    logger.info(f"Ответ отправлен пользователю {user.first_name} ({user.id})")
+    logger.info(f"Відповідь надіслано користувачу {user.first_name} ({user.id})")
 
     return TALKING_WITH_PERSON
 
 
 async def talk_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Завершение диалога с личностью"""
+    """Завершення діалогу з особою"""
     query = update.callback_query
     user = query.from_user
     await query.answer()
@@ -121,13 +121,13 @@ async def talk_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     person = context.user_data.get('person')
 
     if person:
-        logger.info(f"Пользователь {user.first_name} ({user.id}) завершил диалог с {person['name']}")
+        logger.info(f"Користувач {user.first_name} ({user.id}) закінчив діалог з {person['name']}")
         await query.message.reply_text(
-            f"👋 Диалог с {person['emoji']} {person['name']} завершен!\n\n"
-            f"Используй /talk чтобы начать новый диалог или /start для главного меню."
+            f"👋 Діалог з {person['emoji']} {person['name']} закінчено!\n\n"
+            f"Використовуйте /talk щоб почати новий діалог або /start для головного меню."
         )
     else:
-        await query.message.reply_text("Диалог завершен! Используй /start для главного меню.")
+        await query.message.reply_text("Діалог закінчено! Використовуйте /start для головного меню.")
 
     context.user_data.clear()
 
