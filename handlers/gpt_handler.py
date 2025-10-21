@@ -1,5 +1,5 @@
 """
-Обработчик команды /gpt - ChatGPT интерфейс
+Оброблювач команди /gpt - ChatGPT інтерфейс
 """
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -12,84 +12,84 @@ logger = logging.getLogger(__name__)
 
 
 async def gpt_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Начало работы с ChatGPT"""
+    """Початок роботи с ChatGPT"""
     user = update.effective_user
-    logger.info(f"Пользователь {user.first_name} ({user.id}) вызвал /gpt")
+    logger.info(f"Користувач {user.first_name} ({user.id}) натиснув /gpt")
 
     try:
         with open('images/gpt.jpg', 'rb') as photo:
             await update.message.reply_photo(
                 photo=photo,
-                caption="🤖 ChatGPT интерфейс\n\nНапиши свой вопрос текстом или отправь голосовое сообщение 🎤"
+                caption="🤖 ChatGPT інтерфейс\n\nНапиши своє запитання текстом або надішліть голосове повідомлення 🎤"
             )
     except FileNotFoundError:
         await update.message.reply_text(
-            "🤖 ChatGPT интерфейс\n\nНапиши свой вопрос текстом или отправь голосовое сообщение 🎤"
+            "🤖 ChatGPT Інтерфейс\n\nНапиши своє запитання текстом або надішліть голосове повідомлення 🎤"
         )
 
     return WAITING_GPT_QUESTION
 
 
 async def gpt_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Получаем вопрос и отправляем в ChatGPT"""
+    """Отримуємо питання та відправляємо до ChatGPT"""
     user = update.effective_user
     user_message = update.message.text
 
-    logger.info(f"Пользователь {user.first_name} ({user.id}) отправил вопрос: {user_message}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) надіслав питання: {user_message}")
 
-    await update.message.reply_text("⏳ Обрабатываю запрос...")
+    await update.message.reply_text("⏳ Обробляю запит...")
 
     response = get_chatgpt_response(user_message)
 
     keyboard = [
-        [InlineKeyboardButton("➕ Еще вопрос", callback_data="gpt_more")],
-        [InlineKeyboardButton("❌ Закончить", callback_data="gpt_end")]
+        [InlineKeyboardButton("➕ Ще питання", callback_data="gpt_more")],
+        [InlineKeyboardButton("❌ Закінчити", callback_data="gpt_end")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(response, reply_markup=reply_markup)
 
-    logger.info(f"Ответ отправлен пользователю {user.first_name} ({user.id})")
+    logger.info(f"Відповідь надіслано користувачу {user.first_name} ({user.id})")
 
     return WAITING_GPT_QUESTION
 
 
 async def gpt_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает нажатия на кнопки в /gpt"""
+    """Обробляє натискання на кнопки /gpt"""
     query = update.callback_query
     user = query.from_user
     await query.answer()
 
     if query.data == "gpt_more":
-        logger.info(f"Пользователь {user.first_name} ({user.id}) хочет задать еще вопрос")
+        logger.info(f"Користувач {user.first_name} ({user.id}) хоче поставити ще питання")
 
         await query.message.reply_text(
-            "🤖 ChatGPT готов к новому вопросу!\n\n"
-            "Напиши свой вопрос:"
+            "🤖 ChatGPT готовий до нового питання!\n\n"
+            "Напиши своє запитання:"
         )
 
         return WAITING_GPT_QUESTION
 
     elif query.data == "gpt_end":
-        logger.info(f"Пользователь {user.first_name} ({user.id}) закончил /gpt")
+        logger.info(f"Користувач {user.first_name} ({user.id}) закінчив /gpt")
 
         await query.message.reply_text(
-            "👋 Возвращайся с вопросами еще!\n\n"
-            "Используй /start для главного меню."
+            "👋 Повертайся з питаннями ще!\n\n"
+            "Використовуйте /start для виклику головного меню."
         )
 
         return ConversationHandler.END
 
 
 async def gpt_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает голосовое сообщение в режиме /gpt"""
+    """Обробляє голосове повідомлення у режимі /gpt"""
     import os
     from utils.openai_helper import transcribe_audio
 
     user = update.effective_user
-    logger.info(f"Пользователь {user.first_name} ({user.id}) отправил голос в /gpt")
+    logger.info(f"Користувач {user.first_name} ({user.id}) надіслав голос в /gpt")
 
-    await update.message.reply_text("🎤 Обрабатываю голосовое сообщение...")
+    await update.message.reply_text("🎤 Обробляю голосове повідомлення...")
 
     try:
         voice = update.message.voice
@@ -102,30 +102,30 @@ async def gpt_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = transcribe_audio(voice_path)
 
-        if text.startswith("Ошибка"):
+        if text.startswith("Помилка"):
             await update.message.reply_text(f"❌ {text}")
             os.remove(voice_path)
             return WAITING_GPT_QUESTION
 
-        logger.info(f"Распознанный текст в /gpt: {text}")
-        await update.message.reply_text(f"📝 Ты сказал: {text}\n\n⏳ Обрабатываю запрос...")
+        logger.info(f"Розпізнаний текст у /gpt: {text}")
+        await update.message.reply_text(f"📝 Ти сказав: {text}\n\n⏳ Обробляю запит...")
 
         response = get_chatgpt_response(text)
 
         keyboard = [
-            [InlineKeyboardButton("➕ Еще вопрос", callback_data="gpt_more")],
-            [InlineKeyboardButton("❌ Закончить", callback_data="gpt_end")]
+            [InlineKeyboardButton("➕ Ще питання", callback_data="gpt_more")],
+            [InlineKeyboardButton("❌ Закінчити", callback_data="gpt_end")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(response, reply_markup=reply_markup)
 
-        logger.info(f"Ответ отправлен пользователю {user.first_name} ({user.id})")
+        logger.info(f"Відповідь надіслано користувачу{user.first_name} ({user.id})")
 
         os.remove(voice_path)
 
     except Exception as e:
-        logger.error(f"Ошибка обработки голоса в /gpt: {str(e)}")
-        await update.message.reply_text(f"❌ Ошибка обработки: {str(e)}")
+        logger.error(f"Помилка обробки голосу в /gpt: {str(e)}")
+        await update.message.reply_text(f"❌ Помилка обробки: {str(e)}")
 
     return WAITING_GPT_QUESTION
