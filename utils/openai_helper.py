@@ -3,11 +3,7 @@ import logging
 from openai import OpenAI
 from config import OPENAI_TOKEN
 
-
-
-
-
-# Инициализируем клиент OpenAI
+# Ініціалізуємо клієнт OpenAI
 client = OpenAI(api_key=OPENAI_TOKEN)
 
 
