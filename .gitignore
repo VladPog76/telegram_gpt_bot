@@ -1,10 +1,10 @@
 
-# Виртуальное окружение
+# Виртуальне оточення
 .venv/
 venv/
 env/
 
-# Токены и секреты
+# Токени
 .env
 openai-token.txt
 telegram-token.txt
@@ -28,7 +28,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Временные файлы
+# Тимчасові файли
 *.tmp
 temp/
 
