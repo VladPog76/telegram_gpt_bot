@@ -13,14 +13,14 @@ client = OpenAI(api_key=OPENAI_TOKEN)
 
 def get_chatgpt_response(user_message: str, system_prompt: str = None) -> str:
     """
-    Отправляет запрос в ChatGPT и возвращает ответ
+    Надсилає запит до ChatGPT і повертає відповідь
 
     Args:
-        user_message: Сообщение пользователя
-        system_prompt: Системный промпт (опционально)
+        user_message: Повідомлення користувача
+        system_prompt: Системний промпт (опціонально)
 
     Returns:
-        Ответ от ChatGPT
+        Відповідь від ChatGPT
     """
     try:
         messages = []
@@ -41,19 +41,19 @@ def get_chatgpt_response(user_message: str, system_prompt: str = None) -> str:
 
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Ошибка OpenAI API: {str(e)}")
-        return "Извините, произошла ошибка при обращении к ChatGPT. Попробуйте позже."
+        logger.error(f"Помилка OpenAI API: {str(e)}")
+        return "Вибачте, виникла помилка при зверненні до ChatGPT. Спробуйте пізніше."
 
 
 def get_chatgpt_response_with_history(messages: list) -> str:
     """
-    Отправляет запрос в ChatGPT с историей диалога
+    Відправляє запит у ChatGPT з історією діалогу
 
     Args:
-        messages: Список сообщений в формате [{"role": "...", "content": "..."}]
+        messages: Список повідомлень у форматі [{"role": "...", "content": "..."}]
 
     Returns:
-        Ответ от ChatGPT
+        Відповідь від ChatGPT
     """
     try:
         response = client.chat.completions.create(
@@ -67,19 +67,19 @@ def get_chatgpt_response_with_history(messages: list) -> str:
 
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Ошибка OpenAI API с историей: {str(e)}")
-        return "Извините, произошла ошибка при обращении к ChatGPT. Попробуйте позже."
+        logger.error(f"Помилка OpenAI API з історією: {str(e)}")
+        return "Вибачте, виникла помилка при зверненні до ChatGPT. Спробуйте пізніше."
 
 
 def transcribe_audio(audio_file_path: str) -> str:
     """
-    Преобразует аудио в текст с помощью Whisper API
+    Перетворює аудіо на текст за допомогою Whisper API
 
     Args:
-        audio_file_path: Путь к аудиофайлу
+        audio_file_path: Шлях до аудіофайлу
 
     Returns:
-        Распознанный текст
+        Розпізнаний текст
     """
     try:
         with open(audio_file_path, "rb") as audio_file:
@@ -90,23 +90,23 @@ def transcribe_audio(audio_file_path: str) -> str:
             )
         return transcript.text
     except FileNotFoundError:
-        return "Ошибка: аудиофайл не найден"
+        return "Помилка: аудіофайл не знайдено"
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Ошибка Whisper API: {str(e)}")
-        return "Извините, не удалось распознать аудио. Попробуйте еще раз."
+        logger.error(f"Помилка Whisper API: {str(e)}")
+        return "Вибачте, не вдалося розпізнати аудіо. Спробуйте ще раз."
 
 
 def text_to_speech(text: str, output_path: str) -> bool:
     """
-    Преобразует текст в речь с помощью TTS API
+    Перетворює текст на мову за допомогою TTS API
 
     Args:
-        text: Текст для озвучки
-        output_path: Путь для сохранения аудиофайла
+        text: Текст для озвучення
+        output_path: Шлях для збереження аудіофайлу
 
     Returns:
-        True если успешно, False если ошибка
+        True якщо успішно, False якщо помилка
     """
     try:
         response = client.audio.speech.create(
@@ -119,5 +119,5 @@ def text_to_speech(text: str, output_path: str) -> bool:
         return True
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Ошибка TTS API: {str(e)}")
+        logger.error(f"Помилка TTS API: {str(e)}")
         return False

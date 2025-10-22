@@ -1,5 +1,5 @@
 """
-Главный файл бота - инициализация и запуск
+Головний файл бота - ініціалізація та запуск
 """
 import logging
 from telegram import Update
@@ -56,22 +56,22 @@ logger = logging.getLogger(__name__)
 
 # 🚨 Глобальный обработчик ошибок
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает все ошибки в боте"""
-    logger.error(f"Произошла ошибка: {context.error}", exc_info=context.error)
+    """Обробляє всі помилки в роботі"""
+    logger.error(f"Виникла помилка: {context.error}", exc_info=context.error)
 
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text(
-                "😔 Произошла ошибка при обработке запроса.\n"
-                "Попробуй снова или используй /start"
+                "😔 Виникла помилка при обробці запиту.\n"
+                "Спробуй знову або використовуй /start"
             )
         except Exception:
             pass
 
 
 def main():
-    """🚀 Запуск бота"""
-    logger.info("Запуск бота...")
+    """🚀 Запуск боту"""
+    logger.info("Запуск боту...")
 
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
@@ -152,7 +152,7 @@ def main():
     # Регистрируем обработчик ошибок
     application.add_error_handler(error_handler)
 
-    logger.info("Бот успешно запущен и ожидает команды.")
+    logger.info("Бот успішно запущений та чекає команди.")
     application.run_polling()
 
 

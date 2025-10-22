@@ -1,5 +1,5 @@
 """
-Обработчик голосовых сообщений (вне режима переводчика)
+Обробник голосових повідомлень (поза режимом перекладача)
 """
 import logging
 import os
@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает голосовые сообщения"""
+    """Обробляє голосові повідомлення"""
     user = update.effective_user
-    logger.info(f"Пользователь {user.first_name} ({user.id}) отправил голосовое сообщение")
+    logger.info(f"Користувач {user.first_name} ({user.id}) надіслав голосове повідомлення")
 
-    await update.message.reply_text("🎤 Обрабатываю голосовое сообщение...")
+    await update.message.reply_text("🎤 Обробляю голосове повідомлення...")
 
     try:
         voice = update.message.voice
@@ -27,16 +27,16 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         voice_path = f"temp/voice_{user.id}.ogg"
         await voice_file.download_to_drive(voice_path)
 
-        logger.info(f"Голосовое сообщение сохранено: {voice_path}")
+        logger.info(f"Голосове повідомлення збережене: {voice_path}")
 
         text = transcribe_audio(voice_path)
 
-        if text.startswith("Ошибка"):
+        if text.startswith("Помилка"):
             await update.message.reply_text(f"❌ {text}")
             return
 
-        logger.info(f"Распознанный текст: {text}")
-        await update.message.reply_text(f"📝 Ты сказал: {text}\n\n⏳ Генерирую ответ...")
+        logger.info(f"Розпізнаний текст: {text}")
+        await update.message.reply_text(f"📝 Ти сказав: {text}\n\n⏳ Генерую відповідь...")
 
         response = get_chatgpt_response(text)
 
@@ -49,7 +49,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     caption=f"🤖 {response}"
                 )
 
-            logger.info(f"Голосовой ответ отправлен пользователю {user.first_name} ({user.id})")
+            logger.info(f"Голосова відповідь надіслано користувачу {user.first_name} ({user.id})")
 
             os.remove(audio_path)
         else:
@@ -58,5 +58,5 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(voice_path)
 
     except Exception as e:
-        logger.error(f"Ошибка обработки голосового сообщения: {str(e)}")
-        await update.message.reply_text(f"❌ Ошибка обработки: {str(e)}")
+        logger.error(f"Помилка обробки голосового повідомлення: {str(e)}")
+        await update.message.reply_text(f"❌ Помилка обробки: {str(e)}")
