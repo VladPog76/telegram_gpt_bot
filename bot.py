@@ -70,8 +70,18 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    """🚀 Запуск боту"""
-    logger.info("Запуск боту...")
+    """🚀 Запуск бота"""
+    logger.info("Запуск бота...")
+
+    # Логуємо чи використовується проксі
+    from config import PROXY
+    if PROXY:
+        logger.info(f"Використовується проксі: {PROXY}")
+    else:
+        logger.info("Проксі не налаштовано")
+
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+    # ... решта коду
 
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 

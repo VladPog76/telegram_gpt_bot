@@ -1,10 +1,19 @@
 
 import logging
+import httpx
 from openai import OpenAI
-from config import OPENAI_TOKEN
+from config import OPENAI_TOKEN, PROXY
 
-# Ініціалізуємо клієнт OpenAI
-client = OpenAI(api_key=OPENAI_TOKEN)
+# Ініціалізуємо клієнт OpenAI з проксі
+if PROXY:
+    # Якщо проксі є - використовуємо
+    http_client = httpx.Client(proxy=PROXY)
+    client = OpenAI(api_key=OPENAI_TOKEN, http_client=http_client)
+    logging.getLogger(__name__).info(f"OpenAI клієнт використовує проксі: {PROXY}")
+else:
+    # Якщо проксі немає - звичайне підключення
+    client = OpenAI(api_key=OPENAI_TOKEN)
+    logging.getLogger(__name__).info("OpenAI клієнт працює без проксі")
 
 
 def get_chatgpt_response(user_message: str, system_prompt: str = None) -> str:
