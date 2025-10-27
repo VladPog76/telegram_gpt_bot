@@ -1,7 +1,9 @@
+
 """
 Головний файл бота - ініціалізація та запуск
 """
 import logging
+import os
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -15,7 +17,7 @@ from telegram.ext import (
 
 from config import TELEGRAM_TOKEN
 
-# Импорт handlers
+# Імпорт handlers
 from handlers.basic import start, help_command
 from handlers.gpt_handler import gpt_start, gpt_question, gpt_button_handler, gpt_voice
 from handlers.random_handler import random_fact, random_button_handler
@@ -31,14 +33,14 @@ from handlers.translate_handler import (
 )
 from handlers.voice_handler import handle_voice
 
-# Импорт констант
+# Імпорт констант
 from utils.constants import (
     WAITING_GPT_QUESTION, CHOOSING_PERSON, TALKING_WITH_PERSON,
     CHOOSING_QUIZ_THEME, ANSWERING_QUIZ,
     CHOOSING_LANGUAGE, TRANSLATING
 )
 
-# 🧩 Настройка логирования
+# 🧩 Настройка логування
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -54,16 +56,16 @@ logging.getLogger('telegram').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-# 🚨 Глобальный обработчик ошибок
+# 🚨 Глобальний обробник помилок
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє всі помилки в роботі"""
+    """Обрабатывает все ошибки в боте"""
     logger.error(f"Виникла помилка: {context.error}", exc_info=context.error)
 
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text(
                 "😔 Виникла помилка при обробці запиту.\n"
-                "Спробуй знову або використовуй /start"
+                "Спробуй знову або використай /start"
             )
         except Exception:
             pass
@@ -73,7 +75,6 @@ def main():
     """🚀 Запуск бота"""
     logger.info("Запуск бота...")
 
-    # Логуємо чи використовується проксі
     from config import PROXY
     if PROXY:
         logger.info(f"Використовується проксі: {PROXY}")
@@ -81,14 +82,12 @@ def main():
         logger.info("Проксі не налаштовано")
 
     application = Application.builder().token(TELEGRAM_TOKEN).build()
-    # ... решта коду
 
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-    # Регистрируем базовые команды
+    # Регистрируем базові команди
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
 
+    # ConversationHandler для /gpt
     gpt_handler = ConversationHandler(
         entry_points=[CommandHandler("gpt", gpt_start)],
         states={
@@ -100,10 +99,9 @@ def main():
         },
         fallbacks=[CommandHandler("start", start)]
     )
-
     application.add_handler(gpt_handler)
 
-    # Обработчик команды /random
+    # Обробник команди /random
     application.add_handler(CommandHandler("random", random_fact))
     application.add_handler(CallbackQueryHandler(random_button_handler, pattern="^random_"))
 
@@ -156,14 +154,44 @@ def main():
     )
     application.add_handler(translate_handler)
 
-    # Обработчик голосовых сообщений (вне других режимов)
+    # Обробник голосових повідомлень (поза іншими режимами)
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    # Регистрируем обработчик ошибок
+    # Реєструємо обробник помилок
     application.add_error_handler(error_handler)
 
     logger.info("Бот успішно запущений та чекає команди.")
-    application.run_polling()
+
+    # ===== КОД ДЛЯ RENDER (HTTP СЕРВЕР) =====
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    # Запускаємо бота в окремому потоці
+    def run_bot():
+        application.run_polling()
+
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    logger.info("Бот запущено в окремому потоці")
+
+    # Простий HTTP сервер для Render
+    class HealthCheckHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b"Telegram Bot is running! OK")
+
+        def log_message(self, format, *args):
+            pass  # Вимикаємо логи HTTP запитів
+
+    # Беремо порт з змінної оточення (Render встановлює PORT)
+    port = int(os.getenv('PORT', 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    logger.info(f"HTTP сервер запущено на порту {port} для Render")
+
+    # Запускаємо HTTP сервер (блокує виконання)
+    server.serve_forever()
 
 
 if __name__ == "__main__":
