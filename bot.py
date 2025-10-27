@@ -45,7 +45,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("bot.log", encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -97,7 +96,8 @@ def main():
                 CallbackQueryHandler(gpt_button_handler, pattern="^gpt_")
             ]
         },
-        fallbacks=[CommandHandler("start", start)]
+        fallbacks=[CommandHandler("start", start)],
+        per_message=False
     )
     application.add_handler(gpt_handler)
 
@@ -117,7 +117,8 @@ def main():
                 CallbackQueryHandler(talk_end, pattern="^talk_end$")
             ]
         },
-        fallbacks=[CommandHandler("start", start)]
+        fallbacks=[CommandHandler("start", start)],
+        per_message=False
     )
     application.add_handler(talk_handler)
 
@@ -133,7 +134,8 @@ def main():
                 CallbackQueryHandler(quiz_button_handler, pattern="^quiz_")
             ]
         },
-        fallbacks=[CommandHandler("start", start)]
+        fallbacks=[CommandHandler("start", start)],
+        per_message=False
     )
     application.add_handler(quiz_handler)
 
@@ -150,7 +152,8 @@ def main():
                 CallbackQueryHandler(translate_button_handler, pattern="^translate_")
             ]
         },
-        fallbacks=[CommandHandler("start", start)]
+        fallbacks=[CommandHandler("start", start)],
+        per_message=False
     )
     application.add_handler(translate_handler)
 
@@ -162,36 +165,25 @@ def main():
 
     logger.info("Бот успішно запущений та чекає команди.")
 
-    # ===== КОД ДЛЯ RENDER (HTTP СЕРВЕР) =====
-    import threading
-    from http.server import HTTPServer, BaseHTTPRequestHandler
+    # ===== WEBHOOK ДЛЯ RENDER =====
+    PORT = int(os.getenv('PORT', 10000))
 
-    # Запускаємо бота в окремому потоці
-    def run_bot():
+    # URL де Render хостить сервіс
+    WEBHOOK_URL = os.getenv('RENDER_EXTERNAL_URL')
+
+    if WEBHOOK_URL:
+        # Використовуємо webhook (для Render)
+        logger.info(f"Запуск з webhook: {WEBHOOK_URL}")
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path="/webhook",
+            webhook_url=f"{WEBHOOK_URL}/webhook"
+        )
+    else:
+        # Локально - polling
+        logger.info("Запуск з polling (локально)")
         application.run_polling()
-
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    logger.info("Бот запущено в окремому потоці")
-
-    # Простий HTTP сервер для Render
-    class HealthCheckHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(b"Telegram Bot is running! OK")
-
-        def log_message(self, format, *args):
-            pass  # Вимикаємо логи HTTP запитів
-
-    # Беремо порт з змінної оточення (Render встановлює PORT)
-    port = int(os.getenv('PORT', 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    logger.info(f"HTTP сервер запущено на порту {port} для Render")
-
-    # Запускаємо HTTP сервер (блокує виконання)
-    server.serve_forever()
 
 
 if __name__ == "__main__":
