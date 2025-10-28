@@ -69,7 +69,6 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-
 def main():
     """🚀 Запуск бота"""
     logger.info("Запуск бота...")
@@ -165,15 +164,17 @@ def main():
 
     logger.info("Бот успішно запущений та чекає команди.")
 
-    # ===== WEBHOOK ДЛЯ RENDER =====
-    PORT = int(os.getenv('PORT', 10000))
+    # ===== АВТОМАТИЧНИЙ ВИБІР РЕЖИМУ =====
+    # Якщо є RENDER_EXTERNAL_URL - використовуємо webhook (для Render)
+    # Інакше - polling (для локальної роботи та інших платформ)
 
-    # URL де Render хостить сервіс
     WEBHOOK_URL = os.getenv('RENDER_EXTERNAL_URL')
 
     if WEBHOOK_URL:
-        # Використовуємо webhook (для Render)
-        logger.info(f"Запуск з webhook: {WEBHOOK_URL}")
+        # РЕЖИМ WEBHOOK (для Render.com)
+        logger.info(f"🌐 Режим WEBHOOK для Render: {WEBHOOK_URL}")
+        PORT = int(os.getenv('PORT', 10000))
+
         application.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -181,8 +182,8 @@ def main():
             webhook_url=f"{WEBHOOK_URL}/webhook"
         )
     else:
-        # Локально - polling
-        logger.info("Запуск з polling (локально)")
+        # РЕЖИМ POLLING (для локальної роботи та інших платформ)
+        logger.info("🔄 Режим POLLING (локально або інша платформа)")
         application.run_polling()
 
 
