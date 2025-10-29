@@ -118,7 +118,7 @@ PROXY = os.getenv('PROXY')  # Може бути None
 ```env
 TELEGRAM_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 OPENAI_TOKEN=sk-proj-abc123xyz...
-PROXY=http://19.199.103.17:232
+PROXY=http://19.199.103.17:132
 ```
 
 ---
