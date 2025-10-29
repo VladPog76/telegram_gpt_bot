@@ -255,7 +255,7 @@ else:
 **Схема З проксі:**
 ```
 Твій код → httpx.Client(proxy) → Проксі-сервер → OpenAI API
-          (налаштований)        (18.199.183.77)
+          (налаштований)        (твій_проксі)
 ```
 
 **Навіщо:**
@@ -784,7 +784,7 @@ grep ERROR bot.log       # Пошук помилок
 ```env
 TELEGRAM_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 OPENAI_TOKEN=sk-proj-abc123...
-PROXY=http://18.199.183.77:49232
+PROXY=http://твій_проксі
 ```
 
 ### Важливо:
@@ -1276,7 +1276,7 @@ OpenAI бачить: "Запити з IP 99.99.99.99"
 
 **1. В `.env`:**
 ```env
-PROXY=http://18.199.183.77:49232
+PROXY=http://твій_проксі
 ```
 
 **2. В `config.py`:**
@@ -1310,9 +1310,9 @@ http_client.post(
     json={...}
 )
          ↓
-httpx бачить: proxy=http://18.199.183.77:49232
+httpx бачить: proxy=http://твій_проксі
          ↓
-httpx → Проксі-сервер (18.199.183.77:49232)
+httpx → Проксі-сервер (твій_проксі)
          ↓
 Проксі → OpenAI API (api.openai.com)
          ↓
