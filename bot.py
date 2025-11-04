@@ -80,6 +80,8 @@ def main():
         logger.info("Проксі не налаштовано")
 
     application = Application.builder().token(TELEGRAM_TOKEN).build()
+    # Ініціалізуємо кеш для TTS
+    application.bot_data['tts_cache'] = {}
 
     # Регистрируем базові команди
     application.add_handler(CommandHandler("start", start))
@@ -92,7 +94,7 @@ def main():
             WAITING_GPT_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, gpt_question),
                 MessageHandler(filters.VOICE, gpt_voice),
-                CallbackQueryHandler(gpt_button_handler, pattern="^gpt_")
+                CallbackQueryHandler(gpt_button_handler)
             ]
         },
         fallbacks=[CommandHandler("start", start)],
@@ -143,12 +145,12 @@ def main():
         entry_points=[CommandHandler("translate", translate_start)],
         states={
             CHOOSING_LANGUAGE: [
-                CallbackQueryHandler(translate_choose_language, pattern="^translate_lang_")
+                CallbackQueryHandler(translate_choose_language, pattern="^lang_")  # ← ВИПРАВЛЕНО!
             ],
             TRANSLATING: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, translate_text),
                 MessageHandler(filters.VOICE, translate_voice),
-                CallbackQueryHandler(translate_button_handler, pattern="^translate_")
+                CallbackQueryHandler(translate_button_handler)  # ← ПРИБРАНО PATTERN!
             ]
         },
         fallbacks=[CommandHandler("start", start)],

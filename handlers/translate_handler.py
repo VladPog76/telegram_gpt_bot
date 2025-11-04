@@ -1,3 +1,4 @@
+
 """
 Обробник команди /translate - Перекладач
 """
@@ -6,7 +7,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-from utils.openai_helper import get_chatgpt_response, transcribe_audio
+from utils.openai_helper import get_chatgpt_response, transcribe_audio, text_to_speech
 from utils.constants import CHOOSING_LANGUAGE, TRANSLATING, LANGUAGES
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ async def translate_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, lang in LANGUAGES.items():
         keyboard.append([InlineKeyboardButton(
             f"{lang['emoji']} {lang['name']}",
-            callback_data=f"translate_lang_{key}"
+            callback_data=f"lang_{key}"  # ← ВИПРАВЛЕНО! Було translate_lang_
         )])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -43,75 +44,96 @@ async def translate_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def translate_choose_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Користувач вибрав мову"""
+    """Обробляє вибір мови"""
     query = update.callback_query
-    user = query.from_user
     await query.answer()
 
-    lang_key = query.data.replace("translate_lang_", "")
-    language = LANGUAGES.get(lang_key)
+    user = update.effective_user
+    language_code = query.data.replace("lang_", "")
+    language_name = LANGUAGES[language_code]["name"]
 
-    if not language:
-        await query.message.reply_text("Помилка вибору мови. Спробуй /translate ще раз.")
-        return ConversationHandler.END
+    # Зберігаємо мову
+    context.user_data['target_language'] = language_name
 
-    context.user_data['translate_language'] = language
-    context.user_data['translate_lang_key'] = lang_key
-
-    logger.info(f"Користувач {user.first_name} ({user.id}) вибрав мову {language['name']}")
+    logger.info(f"Користувач {user.first_name} ({user.id}) вибрав мову {language_name}")
+    logger.info(f"Збережено в context.user_data: {context.user_data}")
 
     await query.message.reply_text(
-        f"{language['emoji']} Мова перекладу: {language['name']}\n\n"
-        f"Тепер відправь мені:\n"
-        f"• Текстове повідомлення для перекладу\n"
-        f"• АБО голосове повідомлення 🎤"
+        f"✅ Вибрано мову: {language_name}\n\n"
+        f"📝 Тепер надішліть текст або 🎤 голосове повідомлення для перекладу:"
     )
 
     return TRANSLATING
 
 
 async def translate_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Перекладає текстове повідомлення"""
+    """Обробляє текстове повідомлення для перекладу"""
     user = update.effective_user
-    text = update.message.text
+    user_text = update.message.text
 
-    language = context.user_data.get('translate_language')
+    # Діагностика
+    logger.info(f"context.user_data: {context.user_data}")
 
-    if not language:
-        await update.message.reply_text("Помилка: мова не вибрана. Почни заново з /translate")
+    target_language = context.user_data.get('target_language')
+
+    logger.info(f"target_language: {target_language}")
+
+    if not target_language:
+        await update.message.reply_text("❌ Помилка: мова не вибрана. Почніть знову з /translate")
         return ConversationHandler.END
 
-    logger.info(f"Користувач {user.first_name} ({user.id}) надіслав текст для перекладу: {text}")
+    logger.info(f"Переклад тексту від {user.first_name}: {user_text} -> {target_language}")
 
     await update.message.reply_text("⏳ Перекладаю...")
 
-    prompt = f"Переклади наступний текст на {language['name']} мову. Виведи ТІЛЬКИ переклад, без коментарів:\n\n{text}"
-    translation = get_chatgpt_response(prompt)
+    try:
+        # Формуємо промпт
+        prompt = f"Переклади наступний текст на {target_language}. Надай тільки переклад без пояснень:\n\n{user_text}"
 
-    keyboard = [
-        [InlineKeyboardButton("🔄 Змінити мову", callback_data="translate_change_lang")],
-        [InlineKeyboardButton("❌ Закінчити", callback_data="translate_end")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        # Отримуємо переклад
+        translation = get_chatgpt_response(prompt)
 
-    await update.message.reply_text(
-        f"{language['emoji']} Переклад на {language['name']}:\n\n{translation}",
-        reply_markup=reply_markup
-    )
+        # Зберігаємо в кеш для озвучування
+        if 'tts_cache' not in context.bot_data:
+            context.bot_data['tts_cache'] = {}
 
-    logger.info(f"Переклад надіслано користувачу {user.first_name} ({user.id})")
+        cache_key = f"{user.id}_{update.message.message_id}"
+        context.bot_data['tts_cache'][cache_key] = translation
+
+        logger.info(f"Збережено переклад в TTS кеш: {cache_key}")
+
+        # Створюємо кнопки
+        keyboard = [
+            [
+                InlineKeyboardButton("🔊 Озвучити переклад", callback_data=f"tts_trans_{cache_key}"),
+                InlineKeyboardButton("🔄 Ще переклад", callback_data="translate_continue")
+            ],
+            [InlineKeyboardButton("❌ Закінчити", callback_data="translate_end")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        # Відправляємо з кнопками
+        await update.message.reply_text(
+            f"🌍 Переклад:\n{translation}",
+            reply_markup=reply_markup
+        )
+
+        logger.info(f"Переклад надіслано користувачу {user.first_name} ({user.id})")
+
+    except Exception as e:
+        logger.error(f"Помилка перекладу: {e}")
+        await update.message.reply_text(f"❌ Помилка: {e}")
 
     return TRANSLATING
 
 
 async def translate_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Перекладає голосове повідомлення"""
+    """Обробляє голосове повідомлення для перекладу"""
     user = update.effective_user
+    target_language = context.user_data.get('target_language')
 
-    language = context.user_data.get('translate_language')
-
-    if not language:
-        await update.message.reply_text("Помилка: мова не вибрана. Почни заново з /translate")
+    if not target_language:
+        await update.message.reply_text("❌ Помилка: мова не вибрана. Почніть знову з /translate")
         return ConversationHandler.END
 
     logger.info(f"Користувач {user.first_name} ({user.id}) надіслав голос для перекладу")
@@ -127,6 +149,7 @@ async def translate_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         voice_path = f"temp/translate_voice_{user.id}.ogg"
         await voice_file.download_to_drive(voice_path)
 
+        # Розпізнаємо текст
         text = transcribe_audio(voice_path)
 
         if text.startswith("Помилка"):
@@ -135,19 +158,36 @@ async def translate_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return TRANSLATING
 
         logger.info(f"Розпізнаний текст: {text}")
-        await update.message.reply_text(f"📝 Розпізнано: {text}\n\n⏳ Перекладаю...")
+        await update.message.reply_text(f"📝 Ти сказав: {text}\n\n⏳ Перекладаю...")
 
-        prompt = f"Переклади наступний текст на {language['name']} мову. Виведи ТІЛЬКИ переклад, без коментарів:\n\n{text}"
+        # Формуємо промпт
+        prompt = f"Переклади наступний текст на {target_language}. Надай тільки переклад без пояснень:\n\n{text}"
+
+        # Отримуємо переклад
         translation = get_chatgpt_response(prompt)
 
+        # Зберігаємо в кеш для озвучування
+        if 'tts_cache' not in context.bot_data:
+            context.bot_data['tts_cache'] = {}
+
+        cache_key = f"{user.id}_{update.message.message_id}"
+        context.bot_data['tts_cache'][cache_key] = translation
+
+        logger.info(f"Збережено переклад в TTS кеш: {cache_key}")
+
+        # Створюємо кнопки
         keyboard = [
-            [InlineKeyboardButton("🔄 Змінити мову", callback_data="translate_change_lang")],
+            [
+                InlineKeyboardButton("🔊 Озвучити переклад", callback_data=f"tts_trans_{cache_key}"),
+                InlineKeyboardButton("🔄 Ще переклад", callback_data="translate_continue")
+            ],
             [InlineKeyboardButton("❌ Закінчити", callback_data="translate_end")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        # Відправляємо з кнопками
         await update.message.reply_text(
-            f"{language['emoji']} Переклад на {language['name']}:\n\n{translation}",
+            f"🌍 Переклад:\n{translation}",
             reply_markup=reply_markup
         )
 
@@ -156,52 +196,84 @@ async def translate_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(voice_path)
 
     except Exception as e:
-        logger.error(f"Помилка обробки голосу для перекладу: {str(e)}")
-        await update.message.reply_text(f"❌ Помилка обробки: {str(e)}")
+        logger.error(f"Помилка обробки голосу для перекладу: {e}")
+        await update.message.reply_text(f"❌ Помилка: {e}")
+        if os.path.exists(voice_path):
+            os.remove(voice_path)
 
     return TRANSLATING
 
 
 async def translate_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє натискання кнопок у перекладачі"""
+    """Обробка кнопок у режимі перекладу"""
     query = update.callback_query
-    user = query.from_user
     await query.answer()
 
-    if query.data == "translate_change_lang":
-        logger.info(f"Користувач {user.first_name} ({user.id}) змінює мову перекладу")
+    user = update.effective_user
 
-        keyboard = []
-        for key, lang in LANGUAGES.items():
-            keyboard.append([InlineKeyboardButton(
-                f"{lang['emoji']} {lang['name']}",
-                callback_data=f"translate_lang_{key}"
-            )])
+    logger.info(f"Користувач {user.first_name} натиснув кнопку: {query.data}")
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
+    # Озвучування перекладу
+    if query.data.startswith('tts_trans_'):
+        cache_key = query.data.replace('tts_trans_', '')
 
+        tts_cache = context.bot_data.get('tts_cache', {})
+
+        if cache_key not in tts_cache:
+            await query.message.reply_text("❌ Текст для озвучування не знайдено")
+            return TRANSLATING
+
+        text_to_voice = tts_cache[cache_key]
+
+        await query.message.reply_text("🎙️ Створюю аудіо перекладу...")
+
+        output_path = f"temp/tts_trans_{user.id}_{cache_key}.mp3"
+
+        try:
+            os.makedirs("temp", exist_ok=True)
+
+            if text_to_speech(text_to_voice, output_path):
+                with open(output_path, 'rb') as audio_file:
+                    await query.message.reply_voice(voice=audio_file)
+
+                os.remove(output_path)
+                del tts_cache[cache_key]
+
+                # Кнопки після озвучування
+                keyboard = [
+                    [InlineKeyboardButton("🔄 Ще переклад", callback_data="translate_continue")],
+                    [InlineKeyboardButton("❌ Закінчити", callback_data="translate_end")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await query.message.reply_text(
+                    "🎙️ Озвучування завершено!\nЩо далі?",
+                    reply_markup=reply_markup
+                )
+            else:
+                await query.message.reply_text("❌ Помилка при створенні аудіо")
+
+        except Exception as e:
+            logger.error(f"Помилка TTS в перекладі: {e}")
+            await query.message.reply_text(f"❌ Помилка: {e}")
+            if os.path.exists(output_path):
+                os.remove(output_path)
+
+        return TRANSLATING
+
+    # Ще переклад
+    elif query.data == "translate_continue":
         await query.message.reply_text(
-            "🌍 Вибери нову мову для перекладу:",
-            reply_markup=reply_markup
+            "📝 Надішліть текст або голосове для перекладу:"
         )
+        return TRANSLATING
 
-        return CHOOSING_LANGUAGE
-
+    # Закінчити
     elif query.data == "translate_end":
-        language = context.user_data.get('translate_language')
-
-        logger.info(f"Користувач {user.first_name} ({user.id}) завершив переклад.")
-
-        if language:
-            await query.message.reply_text(
-                "👋 Переклад завершено!\n\n"
-                "Використовуйте /translate щоб почати знову або /start для головного меню."
-            )
-        else:
-            await query.message.reply_text(
-                "Переклад завершено! Використовуйте /start для головного меню."
-            )
-
-        context.user_data.clear()
-
+        await query.message.reply_text(
+            "👋 Дякую за використання перекладача!\n"
+            "Щоб повернутися - /start"
+        )
         return ConversationHandler.END
+
+    return TRANSLATING
